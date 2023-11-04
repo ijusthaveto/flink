@@ -3,6 +3,9 @@ package me.ijusthaveto.flink.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.google.gson.Gson;
+import com.google.gson.TypeAdapter;
+import com.google.gson.reflect.TypeToken;
 import lombok.extern.slf4j.Slf4j;
 import me.ijusthaveto.flink.common.ErrorCode;
 import me.ijusthaveto.flink.exception.BusinessException;
@@ -17,6 +20,7 @@ import org.springframework.util.DigestUtils;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -187,8 +191,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
     /**
      * 根据标签搜索用户
-     * @param tagNameList
-     * @return
+     * @param tagNameList 条件标签列表
+     * @return 包含条件标签列表的符合用户列表
      */
     @Override
     public List<User> searchUsersByTags(List<String> tagNameList) {
@@ -197,13 +201,23 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         }
         LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
 
-        /* 拼接 like 查询 */
-        for (String tagName : tagNameList) {
-            queryWrapper = queryWrapper.like(User::getTags, tagName);
-        }
-
-        /* 用户脱敏 */
+        /* 在内存中查询符合的用户 */
         List<User> userList = userMapper.selectList(queryWrapper);
-        return userList.stream().map(this::getSafetyUser).collect(Collectors.toList());
+        Gson gson = new Gson();
+        return userList.stream().filter(user -> {
+            String tagJson = user.getTags();
+            /* 用户无标签 */
+            if (StringUtils.isBlank(tagJson)) {
+                return false;
+            }
+            Set<String> tmpTagNameList = gson.fromJson(tagJson, new TypeToken<Set<String>>() {
+            }.getType());
+            for (String tagName : tagNameList) {
+                if (!tmpTagNameList.contains(tagName)) {
+                    return false;
+                }
+            }
+            return true;
+        }).map(this::getSafetyUser).collect(Collectors.toList());
     }
 }
