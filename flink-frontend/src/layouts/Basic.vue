@@ -8,13 +8,13 @@
       @click-right="onClickRight"
   >
     <template #right>
-      <van-icon name="search" size="18" />
+      <van-icon name="search" size="18"/>
     </template>
   </van-nav-bar>
 
   <!-- content -->
   <div id="content">
-    <router-view />
+    <router-view/>
   </div>
 
   <!-- tab bar -->
@@ -29,10 +29,17 @@
 
 <script setup>
 import {showToast} from "vant";
+import {useRouter} from "vue-router";
+
+const router = useRouter();
 
 /* nav bar */
-const onClickLeft = () => alert("Left");
-const onClickRight = () => alert("Right");
+const onClickLeft = () => {
+  router.push('/')
+};
+const onClickRight = () => {
+  router.push('/search')
+};
 
 /* tab bar */
 const onChange = (index) => showToast(`标签 ${index}`);
